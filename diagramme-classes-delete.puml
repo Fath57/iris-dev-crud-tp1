@@ -1,0 +1,152 @@
+@startuml Diagramme de Classes - Action DELETE Article
+
+' Configuration du style
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam class {
+    BackgroundColor<<Controller>> LightBlue
+    BackgroundColor<<Service>> LightGreen
+    BackgroundColor<<Model>> LightYellow
+    BackgroundColor<<Exception>> LightCoral
+    BorderColor Black
+}
+
+' ===== CONTROLLER LAYER =====
+class ArticlesController <<Controller>> {
+    - articlesService : ArticlesService
+
+    + ArticlesController(articlesService: ArticlesService)
+    + remove(id: string) : Promise<Article>
+}
+
+note right of ArticlesController::remove
+    **Route HTTP:** DELETE /api/articles/:id
+    **Décorateurs:** @Delete(':id')
+    **Paramètres:** @Param('id') id: string
+    **Retour:** HTTP 200 avec l'article supprimé
+             ou HTTP 404 si non trouvé
+end note
+
+' ===== SERVICE LAYER =====
+class ArticlesService <<Service>> {
+    - articleModel : Model<Article>
+
+    + ArticlesService(articleModel: Model<Article>)
+    + remove(id: string) : Promise<Article | null>
+}
+
+note right of ArticlesService::remove
+    **Méthode:** async remove(id: string)
+    **Description:** Supprime un article par son ID
+    **Logique:**
+    1. Recherche l'article par ID
+    2. Supprime l'article de la base de données
+    3. Retourne l'article supprimé ou null
+    **Mongoose:** findByIdAndDelete(id).exec()
+end note
+
+' ===== MODEL LAYER =====
+class Article <<Model>> {
+    + _id : ObjectId
+    + titre : string
+    + resume : string
+    + contenu : string
+    + extract : string
+    + datePublication : Date
+    + statut : string
+    + dateCreation : Date
+    + createdAt : Date
+    + updatedAt : Date
+
+    + save() : Promise<Article>
+    + remove() : Promise<Article>
+}
+
+note right of Article
+    **Schema Mongoose**
+    Représente un article dans MongoDB
+    Collection: articles
+
+    **Contraintes:**
+    - titre: required
+    - resume: required
+    - contenu: required
+    - datePublication: required
+    - statut: enum ['brouillon', 'publie', 'archive']
+    - timestamps: true (auto createdAt/updatedAt)
+end note
+
+' ===== MONGOOSE MODEL =====
+class "Model<Article>" as MongooseModel {
+    + findById(id: string) : Query<Article>
+    + findByIdAndDelete(id: string) : Query<Article>
+    + find(filter: object) : Query<Article[]>
+    + create(doc: object) : Promise<Article>
+}
+
+note right of MongooseModel
+    **Model Mongoose générique**
+    Fournit les méthodes CRUD
+    pour interagir avec MongoDB
+
+    **Pour DELETE:**
+    findByIdAndDelete(id) supprime
+    et retourne le document supprimé
+end note
+
+' ===== EXCEPTIONS =====
+class NotFoundException <<Exception>> {
+    + statusCode : number
+    + message : string
+    + error : string
+
+    + NotFoundException(message: string)
+}
+
+note right of NotFoundException
+    **Exception HTTP 404**
+    Levée quand l'article n'existe pas
+    Message: "Article avec l'ID {id} non trouvé"
+end note
+
+class InternalServerErrorException <<Exception>> {
+    + statusCode : number
+    + message : string
+    + error : string
+
+    + InternalServerErrorException(message: string)
+}
+
+note right of InternalServerErrorException
+    **Exception HTTP 500**
+    Levée en cas d'erreur serveur
+    ou problème avec la base de données
+end note
+
+' ===== RELATIONS =====
+ArticlesController --> ArticlesService : utilise
+ArticlesController ..> Article : retourne
+ArticlesController ..> NotFoundException : peut lever
+ArticlesController ..> InternalServerErrorException : peut lever
+
+ArticlesService --> MongooseModel : utilise
+ArticlesService ..> Article : retourne
+ArticlesService ..> NotFoundException : peut lever
+ArticlesService ..> InternalServerErrorException : peut lever
+
+MongooseModel --> Article : gère
+
+' ===== FLUX D'EXÉCUTION =====
+note as N1
+**Flux d'exécution DELETE:**
+1. Client → DELETE /api/articles/:id
+2. ArticlesController.remove(id)
+3. ArticlesService.remove(id)
+4. Model.findByIdAndDelete(id)
+5. MongoDB: Recherche et suppression
+6. Retour: Article supprimé ou null
+7. Si null → NotFoundException
+8. Sinon → HTTP 200 + Article
+end note
+
+@enduml

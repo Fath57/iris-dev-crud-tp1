@@ -1,0 +1,76 @@
+@startuml Diagramme de Cas d'Utilisation - Gestion des Articles
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Utilisateur" as User
+
+rectangle "Système de Gestion d'Articles" {
+  usecase "Créer un article" as UC1
+  usecase "Consulter tous les articles" as UC2
+  usecase "Consulter un article" as UC3
+  usecase "Modifier un article" as UC4
+  usecase "Supprimer un article" as UC5
+  usecase "Filtrer/Rechercher des articles" as UC6
+
+  ' Relations include
+  UC6 .> UC2 : <<include>>
+}
+
+' Relations avec l'acteur
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+
+note right of UC1
+  POST /api/articles
+  Données requises:
+  - titre
+  - resume
+  - contenu
+  - datePublication
+  - statut (optionnel)
+  - extract (optionnel)
+end note
+
+note right of UC2
+  GET /api/articles
+  Retourne la liste complète
+  des articles avec timestamps
+end note
+
+note right of UC3
+  GET /api/articles/:id
+  Retourne un article
+  spécifique par son ID
+end note
+
+note right of UC4
+  PATCH /api/articles/:id
+  Met à jour partiellement
+  un article existant
+end note
+
+note right of UC5
+  DELETE /api/articles/:id
+  Supprime définitivement
+  un article
+end note
+
+note right of UC6
+  GET /api/articles?query
+  Filtre les articles selon
+  des critères de recherche
+end note
+
+note bottom of "Système de Gestion d'Articles"
+  Statuts possibles d'un article:
+  - brouillon (par défaut)
+  - publie
+  - archive
+end note
+
+@enduml

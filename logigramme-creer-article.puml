@@ -1,0 +1,100 @@
+@startuml Logigramme - Créer un Article
+
+start
+
+:Réception de la requête POST /api/articles;
+:Extraire les données du corps de la requête;
+
+' Validation du titre
+if (Titre existe et non vide ?) then (non)
+  :Retourner erreur 400\n"Le titre est obligatoire";
+  stop
+else (oui)
+endif
+
+' Validation du résumé
+if (Résumé existe et non vide ?) then (non)
+  :Retourner erreur 400\n"Le résumé est obligatoire";
+  stop
+else (oui)
+endif
+
+' Validation du contenu
+if (Contenu existe et non vide ?) then (non)
+  :Retourner erreur 400\n"Le contenu est obligatoire";
+  stop
+else (oui)
+endif
+
+' Validation de la date de publication
+if (Date de publication existe ?) then (non)
+  :Retourner erreur 400\n"La date de publication est obligatoire";
+  stop
+else (oui)
+  if (Date de publication valide ?) then (non)
+    :Retourner erreur 400\n"Format de date invalide";
+    stop
+  else (oui)
+  endif
+endif
+
+' Validation et définition du statut
+if (Statut défini ?) then (non)
+  :Définir statut = "brouillon";
+else (oui)
+  if (Statut dans \n["brouillon", "publie", "archive"] ?) then (non)
+    :Retourner erreur 400\n"Statut invalide";
+    stop
+  else (oui)
+  endif
+endif
+
+' Définition de l'extract
+if (Extract défini ?) then (non)
+  :Définir extract = "";
+else (oui)
+endif
+
+:Créer objet nouvelArticle avec:\n- titre\n- resume\n- contenu\n- extract\n- datePublication\n- statut\n- dateCreation = Date actuelle;
+
+:Tenter la connexion à MongoDB;
+
+if (Connexion réussie ?) then (non)
+  :Retourner erreur 500\n"Erreur de connexion à la base de données";
+  stop
+else (oui)
+endif
+
+partition "Transaction Base de Données" {
+  :Insérer nouvelArticle dans la collection articles;
+
+  if (Insertion réussie ?) then (oui)
+    :Récupérer l'article enregistré avec son _id;
+
+    if (Article possède un _id ?) then (oui)
+      :Préparer réponse succès:\n- statut: 201\n- message: "Article créé avec succès"\n- données: articleEnregistré;
+      :Retourner réponse HTTP 201;
+      stop
+    else (non)
+      :Retourner erreur 500\n"Échec de la création de l'article";
+      stop
+    endif
+
+  else (non - erreur)
+    if (Erreur de duplication ?) then (oui)
+      :Retourner erreur 409\n"Un article avec ce titre existe déjà";
+      stop
+    else (non)
+      if (Erreur de validation Mongoose ?) then (oui)
+        :Retourner erreur 400\n"Données invalides: " + détails erreur;
+        stop
+      else (non)
+        :Logger l'erreur dans les logs système;
+        :Retourner erreur 500\n"Erreur interne du serveur";
+        stop
+      endif
+    endif
+  endif
+}
+
+@enduml

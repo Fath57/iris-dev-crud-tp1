@@ -9,7 +9,7 @@ services:
     environment:
       MONGO_INITDB_DATABASE: crud-dev
     volumes:
-      - mongo_data:/data/db
+      - ./mongo_data:/data/db
     networks:
       - crud-network
 
@@ -26,9 +26,6 @@ services:
       - mongo
     networks:
       - crud-network
-
-volumes:
-  mongo_data:
 
 networks:
   crud-network:
